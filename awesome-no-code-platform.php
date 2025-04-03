@@ -12,7 +12,7 @@ License: GPLv3 or Later
 if (!defined('IS_WP'))define('IS_WP', true);
 if (!defined('AWESOME_DEBUG'))define('AWESOME_DEBUG', false);
 
-if (!defined('ENV_CACHE_KEY'))define('ENV_CACHE_KEY', 'env_ncp_cache-'.$table_prefix.DB_NAME);
+if (!defined('ENV_CACHE_KEY'))define('ENV_CACHE_KEY', 'env_ncp_cache-'.DB_NAME);
 
 if (!defined('AWESOME_CORE_POST_TYPE'))define('AWESOME_CORE_POST_TYPE', 'awesome_core');
 if (!defined('AWESOME_APPS_POST_TYPE'))define('AWESOME_APPS_POST_TYPE', 'aw2_app');
@@ -24,7 +24,7 @@ if (!defined('AWESOME_PATH'))define('AWESOME_PATH', __DIR__.'/core');
 define('AWESOME_APP_BASE_PATH', SITE_URL . REQUEST_START_POINT);
 
 define('HANDLERS_PATH', __DIR__.'/core/core-handlers');
-define('WP_HANDLERS_PATH',  __DIR__ .'/handlers');
+define('WP_HANDLERS_PATH',  __DIR__ .'/wp/handlers');
 define('EXTRA_HANDLERS_PATH', __DIR__.'/core/extra-handlers');
 
 require  __DIR__ .'/core/vendor/autoload.php';
