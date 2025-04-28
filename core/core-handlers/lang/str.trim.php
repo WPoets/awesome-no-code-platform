@@ -32,8 +32,7 @@ function trim_both($atts, $content=null, $shortcode=null) {
     extract(\aw2_library::shortcode_atts(array(
         'main' => null
     ), $atts, 'trim_both'));
-
-   
+    
     if(!is_string($main)) {
         throw new \InvalidArgumentException('str.trim.both: main must be a string value. Use str: prefix for typecasting.');
     }

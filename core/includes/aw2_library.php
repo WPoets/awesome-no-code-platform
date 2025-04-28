@@ -2,7 +2,6 @@
 use DebugBar\StandardDebugBar;
 use aw2\wp\aw2wp_get;
 
-
 define('AW2_ERROR','_error');
 define('AW2_APOS',"'");
 
@@ -76,7 +75,7 @@ private static $hasArray = false;
 
 static function get_service_params($atts){
 	//php8OK
-	$service=array('atts'=>array());
+	$service=array('name'=>null,'atts'=>array());
 	foreach ($atts as $key => $value) {
 		if ($key === 's.@') $service['name'] = $value;
 		elseif (strpos($key, 's.') === 0) $service['atts'][substr($key, 2)] = $value;
@@ -107,7 +106,7 @@ static function get_results($sql){
 	
 	if(!self::$mysqli)self::$mysqli = self::new_mysqli();
 	$obj = self::$mysqli->query($sql);
-	$results = $obj->fetchAll("assoc");	
+	$results = $obj->fetchAll("assoc");				
 	return $results;
 }
 static function shortcode_atts( $pairs, $atts, $shortcode = '' ) {
@@ -579,7 +578,7 @@ static function bytecode_shortcode($content) {
 
 	preg_match_all($re, $content, $matches, PREG_SET_ORDER|PREG_OFFSET_CAPTURE, 0);
 
-		$now = new DateTime();
+		$now = DateTime::createFromFormat('U.u', microtime(true));
 		$val=$now->format("m-d-Y H:i:s.u");
 		echo $val . 'match-start<br>';
 
@@ -590,7 +589,7 @@ static function bytecode_shortcode($content) {
 		if(count($m)===1)
 			$out.=$m[0][0];
 		else{
-			$now = new DateTime();
+			$now = DateTime::createFromFormat('U.u', microtime(true));
 			$val=$now->format("m-d-Y H:i:s.u");
 			echo $val . 'every loop' . count($m) . '<br>';			
 			//\util::var_dump($m);
@@ -599,7 +598,7 @@ static function bytecode_shortcode($content) {
 		}
 		
 	}
-		$now = new DateTime();
+		$now = DateTime::createFromFormat('U.u', microtime(true));
 		$val=$now->format("m-d-Y H:i:s.u");
 		echo $val . 'match-end' . count($m) . '<br>';
 	
@@ -1361,8 +1360,6 @@ static function process_handler($inputs){
 			}
 		}
 	}
-
-
 	if(isset($pre['o2'])){
 		//$reply=self::redirect_output($reply,$pre['o']);
 		foreach ($pre['o2'] as $key => $value) {
@@ -2627,8 +2624,6 @@ static function push_child($obj_type,$name){
 	self::$stack[$obj_type]=&$stack[$stack_id];	
 	return $stack_id;
 }
-
-
 
 static function pop_child($stack_id){
 	//php8OK	
@@ -4297,7 +4292,7 @@ static function module_exists_in_collection($collection,$module){
 		$connection_service = '\\aw2\\'.$connection_arr['connection_service'].'\\module\\exists';
 
 		$atts['connection']=$collection['connection'];
-		$atts['post_type']=$collection['post_type'];
+		$atts['post_type']=isset($collection['post_type'])?$collection['post_type']:'';
 		$atts['module']=$module;
 
 		$arr = call_user_func($connection_service,$atts);
@@ -4313,7 +4308,7 @@ static function get_module_meta($collection,$module){
 		$connection_service = '\\aw2\\'.$connection_arr['connection_service'].'\\module\\meta';
 	
 		$atts['connection']=$collection['connection'];
-		$atts['post_type']=$collection['post_type'];
+		$atts['post_type']=isset($collection['post_type'])?$collection['post_type']:'';
 		$atts['module']=$module;
 
 		$arr = call_user_func($connection_service,$atts);
@@ -4627,10 +4622,6 @@ static function module_run($collection,$module,$template=null,$content=null,$att
 		self::push_atts($stack_id,$atts);
 	}
 
-	//$now = DateTime::createFromFormat('U.u', microtime(true));
-	//$val=$now->format("m-d-Y H:i:s.u");
-	//header('module_executing:' . $module . $val);
-
 	if(self::is_live_debug()){
 		$live_debug_event['action']='module.code.executing';
 		\aw2\live_debug\publish_event(['event'=>$live_debug_event,'bgcolor'=>'#F5F0BB']);
@@ -4643,10 +4634,6 @@ static function module_run($collection,$module,$template=null,$content=null,$att
 	   $return_value=self::parse_shortcode($arr['code']);
 	}
 	
-	//$now = DateTime::createFromFormat('U.u', microtime(true));
-	//$val=$now->format("m-d-Y H:i:s.u");
-	//header('module_executed:' . $module . $val);
-
 
 	if(self::is_live_debug()){
 		$live_debug_event['action']='module.code.executed';

@@ -170,12 +170,13 @@ class controllers{
 		$app['active']['module'] = self::$module;
 		$app['active']['template'] = self::$template;
 		
-		$filename=$_REQUEST['filename'];
+		$filename=preg_replace('/\.\.\/+|\.\/+/', '', $_REQUEST['filename']); 
 		$file_extension=explode('.',$filename);
 		$extension=end($file_extension);
 		
 		$folder=aw2_library::get('realpath.app_folder');
-		$path=$folder . $filename;
+		$path=realpath($folder . $filename);
+		if($path === false ) exit;
 		
 		switch ($extension) {
 			case 'excel':
@@ -210,12 +211,13 @@ class controllers{
 		$app['active']['module'] = self::$module;
 		$app['active']['template'] = self::$template;
 		
-		$filename=$_REQUEST['filename'];
+		$filename=preg_replace('/\.\.\/+|\.\/+/', '', $_REQUEST['filename']); //$_REQUEST['filename'];
 		$file_extension=explode('.',$filename);
 		$extension=end($file_extension);
 		
 		$folder=aw2_library::get('realpath.app_folder');
-		$path=$folder . $filename;
+		$path=realpath($folder . $filename);
+		if($path === false ) exit;
 	
 		switch ($extension) {
 			case 'excel':
@@ -253,7 +255,8 @@ class controllers{
 		
 		$filename=self::$module;	
 		$folder=aw2_library::get('realpath.app_folder');
-		$path=$folder . $filename;
+		$path=realpath($folder . $filename);
+		if($path === false ) exit;
 
 		header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 		header('Content-Disposition: attachment;filename="' . $filename.'"');
@@ -398,7 +401,7 @@ class controllers{
 		$csv_ticket=array_shift($o->pieces);
 		self::set_qs($o);
 		
-		$filename=$_REQUEST['filename'];
+		$filename=preg_replace('/\.\.\/+|\.\/+/', '', $_REQUEST['filename']); //$_REQUEST['filename'];
 		
 		header("Content-type: application/csv");
 		header('Content-Disposition: attachment;filename="' . $filename);
@@ -422,7 +425,7 @@ class controllers{
 		$csv_ticket=array_shift($o->pieces);
 		self::set_qs($o);
 		
-		$filename=$_REQUEST['filename'];
+		$filename=preg_replace('/\.\.\/+|\.\/+/', '', $_REQUEST['filename']); //$_REQUEST['filename'];
 		
 		header("Content-type: application/csv");
 		header('Content-Disposition: attachment;filename="' . $filename);
@@ -543,25 +546,38 @@ class controllers{
 			$live_debug_event['stream']='page';
 			\aw2\live_debug\publish_event(['event'=>$live_debug_event,'format'=>$debug_format]);
 		}	
-
- 
-	
-		$slug= $o->pieces[0];
 		
 		$app=&aw2_library::get_array_ref('app');
 		
-	if(isset($app['settings']['enable_cache'])){
-		self::set_cache_header($app['settings']['enable_cache']);
-	}
-	else	
-			self::set_cache_header('no'); // HTTP 1.1.
-	
-	self::set_index_header();
-	
+		if(isset($app['settings']['enable_cache'])){
+			self::set_cache_header($app['settings']['enable_cache']);
+		}
+		else	
+				self::set_cache_header('no'); // HTTP 1.1.
+		
+		self::set_index_header();
+		$slug= $o->pieces[0];
+		$final_page_slug = $slug;
 			
 		if(isset($app['collection']['pages'])){
+			if(count($o->pieces) > 1){
+
+				// Loop through pieces in reverse order
+				for ($i = count($o->pieces) - 1; $i >= 0; $i--) {
+					$currentPiece = $o->pieces[$i];
+					
+					// Check if module exists
+					if (aw2_library::module_exists_in_collection($app['collection']['pages'], $currentPiece)) {
+						// Build path string with existing pieces
+						$path = array_slice($o->pieces, 0, $i + 1);
+						$o->pieces = array_slice($o->pieces,$i + 1);
+						$slug = $currentPiece;	
+						$final_page_slug = implode("/", $path);
+					}
+				}
+
+			}				
 			if(aw2_library::module_exists_in_collection($app['collection']['pages'],$slug)){
-				array_shift($o->pieces);
 				self::set_qs($o);
 				$app['active']['collection'] = $app['collection']['pages'];
 				$app['active']['module'] = $slug;
@@ -577,7 +593,7 @@ class controllers{
 					\aw2\live_debug\publish_event(['event'=>$live_debug_event,'format'=>$debug_format]);
 				}	
 				
-				$output = self::run_layout($app, 'pages', $slug,$query);
+				$output = self::run_layout($app, 'pages', $final_page_slug,$query);
 			
 				if($output !== false){
 					echo $output; 
@@ -889,40 +905,41 @@ class controllers{
 		return;
 	}
 	
-	static function controller_taxonomy($o, $query){
-		if(empty($o->pieces))return;
-		
-		$app=&aw2_library::get_array_ref('app');
-
-		if(isset($app['settings']['enable_cache'])){
-			self::set_cache_header($app['settings']['enable_cache']);
-		}
-		else	
-				self::set_cache_header('no'); // HTTP 1.1.
-		
-		self::set_index_header();
-		
-		if(!isset($app['settings']['default_taxonomy'])) return;
-		
-		$slug= $o->pieces[0];
-		$taxonomy	= $app['settings']['default_taxonomy'];
-		
-		$post_type='';
-		if( isset($app['collection']['posts']))
-			$post_type	= $app['collection']['posts']['post_type'];
-		
+	static function controller_taxonomy($o, $query) {
+		if (empty($o->pieces)) return;
 	
-		if(empty($taxonomy) || !term_exists( $slug, $taxonomy )) return;
-			
-		array_shift($o->pieces);
+		$app = &aw2_library::get_array_ref('app');
+	
+		// Set cache and index headers
+		self::set_cache_header($app['settings']['enable_cache'] ?? 'no');
+		self::set_index_header();
+	
+		// Validate the default taxonomy setting
+		$taxonomy = $app['settings']['default_taxonomy'] ?? null;
+		if (!$taxonomy || !is_array($o->pieces)) return;
+	
+		// Filter valid terms and identify slug
+		$valid_terms = array_filter($o->pieces, fn($piece) => term_exists($piece, $taxonomy));
+		$first_non_term_index = count($valid_terms);
+	
+		// If valid terms found, set the slug as the last valid term
+		$slug = !empty($valid_terms) ? end($valid_terms) : null;
+		if (!$slug) return;
+	
+		// Update $o->pieces and query variables
+		$o->pieces = array_slice($o->pieces, $first_non_term_index);
 		self::set_qs($o);
-		//taxonomy archive will be handled by archive.php == archive-content-layout;		
-		$query->query_vars[$taxonomy]=$slug;
-		$query->query_vars['post_type']=$post_type;
-		unset($query->query_vars['attachment']);
-		unset($query->query_vars['name']);
-		unset($query->query_vars[$app['collection']['pages']['post_type']]);
-
+	
+		// Set taxonomy and post type in query variables
+		$query->query_vars[$taxonomy] = $slug;
+		$query->query_vars['post_type'] = $app['collection']['posts']['post_type'] ?? '';
+		
+		// Unset unnecessary query vars
+		unset(
+			$query->query_vars['attachment'],
+			$query->query_vars['name'],
+			$query->query_vars[$app['collection']['pages']['post_type'] ?? '']
+		);
 		return;
 	}
 	

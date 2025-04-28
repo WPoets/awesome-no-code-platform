@@ -47,7 +47,6 @@ function create($atts,$content=null,$shortcode){
 }
 
 
-
 \aw2_library::add_service('num.is.positive', 'Check if a number is positive', ['func'=>'is_positive', 'namespace'=>__NAMESPACE__]);
 function is_positive($atts, $content=null, $shortcode=null) {
     extract(\aw2_library::shortcode_atts(array('main' => null), $atts, 'is_positive'));

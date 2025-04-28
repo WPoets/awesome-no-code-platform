@@ -101,8 +101,8 @@ class awesome_flow{
 		
 		if(USE_ENV_CACHE && aw2\global_cache\exists(["main"=>ENV_CACHE])){
 			header('awesome_cache: used');
-			$now = new DateTime();
-			$val = $now->format("m-d-Y H:i:s.u");
+			$now = DateTime::createFromFormat('U.u', microtime(true));
+			$val=$now->format("m-d-Y H:i:s.u");
 			header('cache_time:' . $val);
 
 			if(\aw2_library::is_live_debug()){
@@ -194,14 +194,14 @@ class awesome_flow{
 			if(SET_ENV_CACHE){
 				$ref=aw2_library::get_array_ref();
 				$handlers=serialize($ref['handlers']);
-			
-
 				aw2\global_cache\hset(["main"=>ENV_CACHE,"field"=>"handlers","value"=>$handlers]);				
 				aw2\global_cache\hset(
 				["main"=>ENV_CACHE,"field"=>"apps","value"=>serialize($ref['apps'])]);				
 				
 				aw2\global_cache\hset(["main"=>ENV_CACHE,"field"=>"settings","value"=>serialize($ref['settings'])]);
-				aw2\global_cache\hset(["main"=>ENV_CACHE,"field"=>"css","value"=>serialize($ref['css'])]);
+
+				$css = isset($ref['css']) ? serialize($ref['css']) : '';
+				aw2\global_cache\hset(["main"=>ENV_CACHE,"field"=>"css","value"=>$css]);
 
 				$content_types=$ref['content_types'];
 				$ct_arr=array();
@@ -331,7 +331,7 @@ class awesome_flow{
 
 	static function load_env_settings(){
 		$settings=&aw2_library::get_array_ref('settings');
-		$settings=array();
+		if(!is_array($settings)) $settings=array();
 		
 		$exists=aw2_library::module_exists_in_collection(['post_type'=>AWESOME_CORE_POST_TYPE],'settings');
 		if(!$exists) return;
@@ -358,7 +358,7 @@ class awesome_flow{
 		$cache['enable']='no';
 		if(isset($_SERVER['REQUEST_METHOD'])&& $_SERVER['REQUEST_METHOD']==='GET'){
 			if(!isset($_SERVER['QUERY_STRING']) || empty($_SERVER['QUERY_STRING'])){
-				if(!isset($_SERVER['HTTP_REFERER']) || empty($_SERVER['HTTP_REFERER'])){
+				
 					if(!(array_key_exists('wordpress_logged_in',$_COOKIE) || array_key_exists('aw2_vsession',$_COOKIE) || array_key_exists('wordpress_no_cache',$_COOKIE))){
 						if(!IS_WP){
 							$cache['failed']='Not WP';
@@ -375,10 +375,7 @@ class awesome_flow{
 					else{
 						$cache['failed']='Restricted Cookies are there';
 					}
-				}
-				else{
-					$cache['failed']='Referrer is there';
-				}
+				
 			}
 			else{
 				$cache['failed']='Query String is there';
@@ -465,25 +462,16 @@ class awesome_flow{
 		if(\aw2_library::endswith($request,'/'))
 			$request=substr($request, 0,-1);
 
-			if(defined('DEFAULT_APP')){
-				if(empty($request)){
-					$request=DEFAULT_APP;
-				}
-			}
-
-		if(empty($request)){
-			self::initialize_root(); // it is front page hence request is not set so setup root.
+		if(empty($request) && defined('DEFAULT_APP')){
+			$request = DEFAULT_APP;
+		}
+		else if(empty($request)){
+			self::initialize_root($query); // it is front page hence request is not set so setup root.
 			return;
 		}
 
 		$pieces = explode('/',urldecode($request));
-
-		if(defined('DEFAULT_APP')){
-			if(isset($pieces[0]) && $pieces[0]!=='bicri'){
-			array_unshift($pieces, DEFAULT_APP);
-			}
-		}
-			
+		
 		// do we own the app?
 		$app_slug= $pieces[0];
 
@@ -550,6 +538,12 @@ class awesome_flow{
 			}
 			
 			\aw2_library::service_run('controllers.' . $name,['o'=>$o],null,'service'); // run the controller service, it is responsible for handling echo and exit.
+		}
+
+		if(!$app->exists($app_slug)  && defined('DEFAULT_APP')){
+			$app_slug = DEFAULT_APP;
+			//prepend to array $pieces the ROOT_APP
+			array_unshift($pieces,$app_slug);
 		}
 		
 		if($app->exists($app_slug)){
