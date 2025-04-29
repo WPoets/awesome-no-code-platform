@@ -79,3 +79,7 @@ aw2_library::load_handlers_from_path(HANDLERS_PATH,'controllers','connectors');
 
 aw2_library::load_handlers_from_path(WP_HANDLERS_PATH,'wp');
 aw2_library::load_all_extra_handlers();
+
+add_action( 'init', function() {
+  do_action( 'awesome_is_ready');
+},1);
