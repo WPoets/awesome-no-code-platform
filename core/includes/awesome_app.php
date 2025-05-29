@@ -72,7 +72,7 @@ class awesome_app{
 	}
 	
 
-	
+
 	public function load_settings(){
 		$app=&aw2_library::get_array_ref('app');
 	
@@ -82,19 +82,21 @@ class awesome_app{
 		
 		//change to module_meta
 		$all_post_meta = aw2_library::get_module_meta($app['collection']['config'],'settings');
-	
-		foreach($all_post_meta as $key=>$meta){
-			
-			//ignore private keys
-			if(strpos($key, '_') === 0 )
-				continue;
-			
-			$app['settings'][$key] = $meta;
+		if(!empty($all_post_meta) && is_array($all_post_meta)){
+			foreach($all_post_meta as $key=>$meta){
+				
+				//ignore private keys
+				if(strpos($key, '_') === 0 )
+					continue;
+				
+				$app['settings'][$key] = $meta;
 
+			}
 		}
+		
 		\aw2_library::module_run($app['collection']['config'],'settings');
 
-	}	
+	}
 	
 	public function setup_collections(){
 		
